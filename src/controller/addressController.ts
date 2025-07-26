@@ -20,20 +20,27 @@ export const validateAddress = async (
         error: 'Address is required and must be a string',
       });
     }
-
     const osmData = await fetchAddressData(address);
-    const parsedAddress = parseAddress(address);
+
+    if (!osmData) {
+      return res.status(404).json({
+        error: 'Address not found',
+      });
+    }
+
+    const parsedAddress = parseAddress(osmData.display_name);
 
     if (parsedAddress instanceof Error) {
-      return res.status(400).json({
+      return res.status(500).json({
         error: parsedAddress,
+        addressType: 'unverifiable',
       });
     }
 
     res.json({
       success: true,
-      parsed: parsedAddress,
-      osm_results: osmData,
+      address: parsedAddress.address,
+      addressType: parsedAddress.type,
     });
   } catch (error) {
     console.error('Error validating address:', error);

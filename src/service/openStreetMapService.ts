@@ -24,10 +24,31 @@ export const buildQuery = (address: string): string => {
 
 export const fetchAddressData = async (
   address: string,
-): Promise<OpenStreetMapResult[]> => {
-  const response = await fetch(buildQuery(address));
+): Promise<OpenStreetMapResult | null> => {
+  const query = buildQuery(address);
+  console.log(query);
+  const response = await fetch(query, {
+    headers: {
+      'User-Agent': 'Addressify/1.0 (Contact: your-email@example.com)',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Nominatim API error: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(
+      `Expected JSON response but got: ${contentType}. Response: ${text.substring(0, 200)}...`,
+    );
+  }
+
   const data = (await response.json()) as OpenStreetMapResult[];
-  return data;
+  return findBestAddressMatch(data);
 };
 
 export const findBestAddressMatch = (

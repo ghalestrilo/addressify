@@ -1,5 +1,7 @@
 import { Address } from '../model/address';
-// import postal from 'node-postal';
+
+export type AddressInfoType = 'valid' | 'corrected' | 'unverifiable';
+
 const postal = require('node-postal');
 
 type PostalAddressReturn = {
@@ -7,29 +9,43 @@ type PostalAddressReturn = {
   component: string;
 }[];
 
-export const parseAddress = (address: string): Address | Error => {
-  // const data = addresser.parseAddress(address);
-  const data: PostalAddressReturn = postal.parser.parse_address(address);
+export type AddressInfo = {
+  address: Address;
+  type: AddressInfoType;
+};
 
-  console.log(data);
-
-  const addressKeyPairs: Array<[string, string]> = data.map(
-    ({ value, component }) => [component, value],
-  );
-  const addressData = Object.fromEntries(addressKeyPairs);
-
-  console.log(addressData);
-
+export const parseAddress = (address: string): AddressInfo | Error => {
   try {
-    return {
+    const data: PostalAddressReturn = postal.parser.parse_address(address);
+
+    const addressKeyPairs: Array<[string, string]> = data.map(
+      ({ value, component }) => [component, value],
+    );
+    const addressData = Object.fromEntries(addressKeyPairs);
+    const addressResponseInfo = {
       street: addressData.road,
       number: parseInt(addressData.house_number),
       city: addressData.city,
       state: addressData.state,
       zip: parseInt(addressData.postcode),
     };
+
+    return {
+      address: addressResponseInfo,
+      type: getAdressInfoType(address, addressData['display_name']),
+    };
   } catch (error) {
     console.error(error);
     return new Error('Invalid address');
   }
+};
+
+const getAdressInfoType = (
+  addressString: string,
+  addressResponseString: string,
+): AddressInfoType => {
+  if (addressString === addressResponseString) {
+    return 'valid';
+  }
+  return 'corrected';
 };

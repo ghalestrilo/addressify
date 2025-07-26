@@ -78,8 +78,6 @@ describe('Express App', () => {
         .post('/validate-address')
         .send({ address: testAddress });
 
-      // expect(response.status).toBeOneOf([200, 400]); // May fail if parsing fails
-
       if (response.status === 200) {
         expect(response.body.success).toBe(true);
         expect(response.body.parsed).toBeDefined();

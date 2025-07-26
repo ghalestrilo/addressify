@@ -17,6 +17,7 @@ Usage of AI
 
 - Generation of Tests
 - Generation of Docker configuration
+- autogeneration of type declaration boilerplate
 
 ## Description
 
