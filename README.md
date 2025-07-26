@@ -1,10 +1,72 @@
 # Addressify
 
-Your address validation and parsing service
+Your address validation and parsing service.
+
+## Running Locally
+
+The most straightforward way to run Addressify locally is by using Docker. Assuming you have both [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed, you can run Addressify with the following commands:
+
+```bash
+$ docker-compose up -d
+```
+
+As an alternative, it can be run via [yarn](https://yarnpkg.com/) with the following commands:
+
+```bash
+$ yarn install
+$ yarn start:dev
+```
+
+This will start the Addressify service in the background. You can access the service at `http://localhost:8080`. Using the HTTP client of your choice, you can send a POST request to the `/validate-address` endpoint with a JSON payload containing an `address` field. This can be done using [httpie](https://httpie.io/) via the following command:
+
+```bash
+$ http http://localhost:8080/validate-address address="1600 Amphitheatre Parkway, Mountain View, CA"
+
+> HTTP/1.1 200 OK
+>  Connection: keep-alive
+>  Content-Length: 156
+>  Content-Type: application/json; charset=utf-8
+>  Date: Sat, 26 Jul 2025 23:09:33 GMT
+>  ETag: W/"9c-RhdDoFWGf9A3GEDv9NIJT6btJXM"
+>  Keep-Alive: timeout=5
+>  X-Powered-By: Express
+>
+>  {
+>      "address": {
+>          "city": "Mountain View",
+>          "number": 1600,
+>          "state": "California",
+>          "street": "Amphitheatre Parkway",
+>          "zip": 94043
+>      },
+>      "addressType": "corrected",
+>      "success": true
+>  }
+>
+```
 
 ## Design
 
-## Architecture
+Addressify works by exposing a single `/validate-address` endpoint which accepts a JSON payload with an `address` field. It relies on OpenStreetMap data as its source of truth for address validation and parsing.
+
+### Possible Return Status Codes and Data
+
+| Status Code | Description                                | Data                                                                        |
+| ----------- | ------------------------------------------ | --------------------------------------------------------------------------- |
+| 200         | Address is valid and parsed successfully   | `{street: "Main St", houseNumber: "123", city: "New York", country: "USA"}` |
+| 400         | Invalid input (missing or invalid address) | `{ error: message }`                                                        |
+| 404         | Address not found in OpenStreetMap         | `{ error: message }`                                                        |
+| 500         | Internal server error                      | `{ error: message }`                                                        |
+
+## Architecture Decisions
+
+Address Validation is a complex problem due to its virtually infinite variable space and. A deterministic solution hasn't been found yet due to the variety and inconsistency of address information. Therefore it's a very good use case for Natural Language Processing (NLP) techniques.
+
+The most sophisticated approach for validating and structuring data involves combining NLP techniques for input validation and GeoData lookup for address validation. Training a dedicated model or populating a database with address data isn't a viable approach due to time constraints.
+
+[OpenStreetMap's Nominatim](https://nominatim.org/) is a public API which combines both and provide a robust and reliable service we can use.
+
+This project uses [express js](https://expressjs.com/) to build its API layer for simplicity and queries [Nominatim](https://nominatim.org/) with node fetch.
 
 - Good use-case for NLP
 - Not training a model for it
@@ -13,84 +75,55 @@ Your address validation and parsing service
 - Handles most of the complex use-cases
 - Uses a third-party library for parsing and validation
 
+### Address Validation Flow
+
+The main endpoint exposed by our API is `/validate-address`, which implements the following algorithm to treat and validate input as well as communicating with Nominatim API, structuring data, handling errors and returning a response.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant main.ts
+    participant addressController
+    participant openStreetMapService
+    participant Nominatim API
+
+    Client->>main.ts: POST /validate-address {address: "123 Main St"}
+    main.ts->>addressController: validateAddress(req, res)
+
+    addressController->>addressController: Validate input (address exists & is string)
+
+    alt Address validation fails
+        addressController->>Client: 400 Bad Request
+    else Address validation passes
+        addressController->>openStreetMapService: fetchAddressData(address)
+        openStreetMapService->>openStreetMapService: buildQuery(address)
+        openStreetMapService->>Nominatim API: GET search?q=address&addressdetails=1&format=json
+
+        alt API request fails
+            Nominatim API->>openStreetMapService: Error response
+            openStreetMapService->>addressController: throw Error
+            addressController->>Client: 500 Internal Server Error
+        else API request succeeds
+            Nominatim API->>openStreetMapService: OpenStreetMapResult[]
+            openStreetMapService->>openStreetMapService: findBestAddressMatch(data)
+
+            alt No address match found
+                openStreetMapService->>addressController: null
+                addressController->>Client: 404 Address not found
+            else Address match found
+                openStreetMapService->>addressController: OpenStreetMapResult
+                addressController->>openStreetMapService: parseAddress(osmResult, address)
+                openStreetMapService->>addressController: AddressInfo
+                addressController->>Client: 200 OK {success: true, address: Address, addressType: 'valid'|'corrected'}
+            end
+        end
+    end
+```
+
 Usage of AI
 
-- Generation of Tests
-- Generation of Docker configuration
-- autogeneration of type declaration boilerplate
+AI has been used via Zed Editor for the following purposes:
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ yarn install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- Generation of Tests - LLMs are particularly good at text processing, meaning we can leverage them to write unit tests very quickly by providing prompts describing what the tests should validate.
+- Generation of Docker configuration - Docker is one of the most popular solutions for containerization, meaning market LLMs will have a lot of context on it. It's been used to build the Docker image and docker-compose configuration making it easier to run and deploy on different machines.
+- Autogeneration of type declaration boilerplate: the Nominatim API returns data in a parameterized and very predictable format, making it easy to generate type declarations for the response although time-consuming. NLP has been used to generate this type declaration.
