@@ -19,14 +19,14 @@ export interface OpenStreetMapResult {
   place_rank: number;
   type: string;
   address: {
-    road: string;
-    house_number: string;
-    city: string;
-    state: string;
-    country: string;
-    postcode: string;
-    town: string;
-    municipality: string;
+    road?: string;
+    house_number?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postcode?: string;
+    town?: string;
+    municipality?: string;
   };
 }
 
@@ -87,10 +87,10 @@ export const parseAddress = (
   return {
     address: {
       street: addressData.road,
-      number: parseInt(addressData.house_number),
+      number: parseInt(addressData?.house_number || ''),
       city: addressData.city || addressData.town || addressData.municipality,
       state: addressData.state,
-      zip: parseInt(addressData.postcode),
+      zip: parseInt(addressData?.postcode || ''),
     },
     type: getAdressInfoType(addressString, osmResult.display_name),
   };

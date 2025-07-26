@@ -12,7 +12,7 @@ describe('OpenStreetMapService', () => {
     it('should build correct URL for the given example', () => {
       const address = '1600 Amphitheatre Parkway, Mountain View, CA';
       const expected =
-        'https://nominatim.openstreetmap.org/search?q=1600%20Amphitheatre%20Parkway%2C%20Mountain%20View%2C%20CA&format=json';
+        'https://nominatim.openstreetmap.org/search?q=1600%20Amphitheatre%20Parkway%2C%20Mountain%20View%2C%20CA&addressdetails=1&format=json';
 
       const result = buildQuery(address);
 
@@ -33,7 +33,7 @@ describe('OpenStreetMapService', () => {
     it('should handle empty string', () => {
       const address = '';
       const expected =
-        'https://nominatim.openstreetmap.org/search?q=&format=json';
+        'https://nominatim.openstreetmap.org/search?q=&addressdetails=1&format=json';
 
       const result = buildQuery(address);
 
@@ -76,6 +76,18 @@ describe('OpenStreetMapService', () => {
     it('should return the result with highest importance from the given payload', () => {
       const payload = [
         {
+          address: {
+            'ISO3166-2-lvl4': 'US-CA',
+            building: 'Google Building 41',
+            city: 'Mountain View',
+            country: 'United States',
+            country_code: 'us',
+            county: 'Santa Clara County',
+            house_number: '1600',
+            postcode: '94043',
+            road: 'Amphitheatre Parkway',
+            state: 'California',
+          },
           addresstype: 'building',
           boundingbox: [
             '37.4221124',
@@ -94,11 +106,23 @@ describe('OpenStreetMapService', () => {
           name: 'Google Building 41',
           osm_id: 23733659,
           osm_type: 'way',
-          place_id: 298531695,
+          place_id: 298441273,
           place_rank: 30,
           type: 'commercial',
         },
         {
+          address: {
+            'ISO3166-2-lvl4': 'US-CA',
+            city: 'Mountain View',
+            country: 'United States',
+            country_code: 'us',
+            county: 'Santa Clara County',
+            house_number: '1600',
+            office: 'Google Headquarters',
+            postcode: '94043',
+            road: 'Amphitheatre Parkway',
+            state: 'California',
+          },
           addresstype: 'office',
           boundingbox: [
             '37.4217136',
@@ -107,8 +131,9 @@ describe('OpenStreetMapService', () => {
             '-122.0845640',
           ],
           class: 'office',
-          display_name: 'Some other address which is definitely not Google',
-          importance: 6.277943083843774e-6,
+          display_name:
+            'Google Headquarters, 1600, Amphitheatre Parkway, Mountain View, Santa Clara County, California, 94043, United States',
+          importance: 6.277943083843774e-5,
           lat: '37.4217636',
           licence:
             'Data © OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright',
@@ -116,7 +141,7 @@ describe('OpenStreetMapService', () => {
           name: 'Google Headquarters',
           osm_id: 2192620021,
           osm_type: 'node',
-          place_id: 298610557,
+          place_id: 297666154,
           place_rank: 30,
           type: 'it',
         },

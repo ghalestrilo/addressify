@@ -31,8 +31,8 @@ describe('Express App', () => {
 
       if (response.status === 200) {
         expect(response.body.success).toBe(true);
-        expect(response.body.parsed).toBeDefined();
-        expect(response.body.osm_results).toBeDefined();
+        expect(response.body.address).toBeDefined();
+        expect(response.body.addressType).toBeDefined();
       }
     });
 
@@ -42,9 +42,7 @@ describe('Express App', () => {
         .send({})
         .expect(400);
 
-      expect(response.body.error).toBe(
-        'Address is required and must be a string',
-      );
+      expect(response.body.error).toBe('Address is required');
     });
   });
 
