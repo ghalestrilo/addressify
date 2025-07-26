@@ -26,12 +26,11 @@ export const fetchAddressData = async (
   address: string,
 ): Promise<OpenStreetMapResult[]> => {
   const response = await fetch(buildQuery(address));
-  const data = await response.json();
-  console.log(data);
+  const data = (await response.json()) as OpenStreetMapResult[];
   return data;
 };
 
-export const findBestMatch = (
+export const findBestAddressMatch = (
   options: OpenStreetMapResult[],
 ): OpenStreetMapResult | null => {
   if (!options || options.length === 0) {

@@ -1,4 +1,4 @@
-import { buildQuery, findBestMatch } from './openStreetMapService';
+import { buildQuery, findBestAddressMatch } from './openStreetMapService';
 
 const isProperQueryURL = (url: string) => {
   return (
@@ -72,7 +72,7 @@ describe('OpenStreetMapService', () => {
     });
   });
 
-  describe('findBestMatch', () => {
+  describe('findBestAddressMatch', () => {
     it('should return the result with highest importance from the given payload', () => {
       const payload = [
         {
@@ -122,7 +122,7 @@ describe('OpenStreetMapService', () => {
         },
       ];
 
-      const result = findBestMatch(payload);
+      const result = findBestAddressMatch(payload);
 
       expect(result).toBeDefined();
       expect(['Google Building 41', 'Google Headquarters']).toContain(
@@ -131,7 +131,7 @@ describe('OpenStreetMapService', () => {
     });
 
     it('should return null for empty array', () => {
-      const result = findBestMatch([]);
+      const result = findBestAddressMatch([]);
 
       expect(result).toBeNull();
     });
