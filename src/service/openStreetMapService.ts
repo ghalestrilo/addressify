@@ -1,4 +1,7 @@
 const baseURL = 'https://nominatim.openstreetmap.org/search';
+import { Address } from '../model/address';
+
+export type AddressInfoType = 'valid' | 'corrected' | 'unverifiable';
 
 export interface OpenStreetMapResult {
   addresstype: string;
@@ -15,18 +18,32 @@ export interface OpenStreetMapResult {
   place_id: number;
   place_rank: number;
   type: string;
+  address: {
+    road: string;
+    house_number: string;
+    city: string;
+    state: string;
+    country: string;
+    postcode: string;
+    town: string;
+    municipality: string;
+  };
 }
+
+export type AddressInfo = {
+  address: Address;
+  type: AddressInfoType;
+};
 
 export const buildQuery = (address: string): string => {
   const encodedAddress = encodeURIComponent(address);
-  return `${baseURL}?q=${encodedAddress}&format=json`;
+  return `${baseURL}?q=${encodedAddress}&addressdetails=1&format=json`;
 };
 
 export const fetchAddressData = async (
   address: string,
 ): Promise<OpenStreetMapResult | null> => {
   const query = buildQuery(address);
-  console.log(query);
   const response = await fetch(query, {
     headers: {
       'User-Agent': 'Addressify/1.0 (Contact: your-email@example.com)',
@@ -59,4 +76,32 @@ export const findBestAddressMatch = (
   }
 
   return options.sort((a, b) => b.importance - a.importance)[0];
+};
+
+export const parseAddress = (
+  osmResult: OpenStreetMapResult,
+  addressString: string,
+) => {
+  const addressData = osmResult.address || {};
+
+  return {
+    address: {
+      street: addressData.road,
+      number: parseInt(addressData.house_number),
+      city: addressData.city || addressData.town || addressData.municipality,
+      state: addressData.state,
+      zip: parseInt(addressData.postcode),
+    },
+    type: getAdressInfoType(addressString, osmResult.display_name),
+  };
+};
+
+const getAdressInfoType = (
+  addressString: string,
+  addressResponseString: string,
+): AddressInfoType => {
+  if (addressString === addressResponseString) {
+    return 'valid';
+  }
+  return 'corrected';
 };

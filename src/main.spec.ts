@@ -21,55 +21,6 @@ describe('Express App', () => {
     });
   });
 
-  describe('POST /parse-address', () => {
-    it('should parse a valid address', async () => {
-      const testAddress = '123 Main St, New York, NY 10001';
-
-      const response = await request(app)
-        .post('/parse-address')
-        .send({ address: testAddress })
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toBeDefined();
-    });
-
-    it('should return error for missing address', async () => {
-      const response = await request(app)
-        .post('/parse-address')
-        .send({})
-        .expect(400);
-
-      expect(response.body.error).toBe(
-        'Address is required and must be a string',
-      );
-    });
-
-    it('should return error for invalid address type', async () => {
-      const response = await request(app)
-        .post('/parse-address')
-        .send({ address: 123 })
-        .expect(400);
-
-      expect(response.body.error).toBe(
-        'Address is required and must be a string',
-      );
-    });
-  });
-
-  describe('GET /parse-address/:address', () => {
-    it('should parse address from URL parameter', async () => {
-      const testAddress = encodeURIComponent('123 Main St, New York, NY 10001');
-
-      const response = await request(app)
-        .get(`/parse-address/${testAddress}`)
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toBeDefined();
-    });
-  });
-
   describe('POST /validate-address', () => {
     it('should validate and parse address', async () => {
       const testAddress = '123 Main St, New York, NY 10001';

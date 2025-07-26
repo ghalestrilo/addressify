@@ -1,5 +1,7 @@
-import { parseAddress } from '../service/addressService';
-import { fetchAddressData } from '../service/openStreetMapService';
+import {
+  fetchAddressData,
+  parseAddress,
+} from '../service/openStreetMapService';
 import { Request, Response } from 'express';
 
 export const validateAddress = async (
@@ -25,10 +27,11 @@ export const validateAddress = async (
     if (!osmData) {
       return res.status(404).json({
         error: 'Address not found',
+        addressType: 'unverifiable',
       });
     }
 
-    const parsedAddress = parseAddress(osmData.display_name);
+    const parsedAddress = parseAddress(osmData, address);
 
     if (parsedAddress instanceof Error) {
       return res.status(500).json({

@@ -3,7 +3,7 @@ import { buildQuery, findBestAddressMatch } from './openStreetMapService';
 const isProperQueryURL = (url: string) => {
   return (
     url.startsWith('https://nominatim.openstreetmap.org/search?q=') &&
-    url.endsWith('&format=json')
+    url.endsWith('&addressdetails=1&format=json')
   );
 };
 
