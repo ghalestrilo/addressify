@@ -120,7 +120,7 @@ sequenceDiagram
     end
 ```
 
-Usage of AI
+## Usage of AI
 
 AI has been used via Zed Editor for the following purposes:
 
