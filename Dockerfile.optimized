@@ -1,0 +1,112 @@
+# Multi-stage build for optimized Docker image
+FROM node:20-bullseye as libpostal-builder
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LIBPOSTAL_DATA_DIR=/opt/libpostal_data
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create directory for libpostal data
+RUN mkdir -p $LIBPOSTAL_DATA_DIR
+
+# Clone and build libpostal
+WORKDIR /tmp
+RUN git clone https://github.com/openvenues/libpostal.git
+WORKDIR /tmp/libpostal
+
+# Bootstrap, configure, and build libpostal
+RUN ./bootstrap.sh && \
+    ./configure --datadir=$LIBPOSTAL_DATA_DIR && \
+    make -j$(nproc) && \
+    make install
+
+# Stage 2: Node.js application builder
+FROM node:20-bullseye as app-builder
+
+# Install only runtime dependencies for libpostal
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    python2.7 \
+    python-is-python2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy libpostal installation from previous stage
+COPY --from=libpostal-builder /usr/local/lib/libpostal* /usr/local/lib/
+COPY --from=libpostal-builder /usr/local/include/libpostal /usr/local/include/libpostal
+COPY --from=libpostal-builder /opt/libpostal_data /opt/libpostal_data
+
+# Update library cache
+RUN ldconfig
+
+# Install node-gyp globally
+RUN npm install -g node-gyp
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY yarn.lock ./
+
+# Install dependencies
+RUN yarn install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN yarn build
+
+# Stage 3: Production runtime
+FROM node:20-bullseye-slim as production
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy libpostal libraries and data
+COPY --from=libpostal-builder /usr/local/lib/libpostal* /usr/local/lib/
+COPY --from=libpostal-builder /usr/local/include/libpostal /usr/local/include/libpostal
+COPY --from=libpostal-builder /opt/libpostal_data /opt/libpostal_data
+
+# Update library cache
+RUN ldconfig
+
+# Create non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application and dependencies
+COPY --from=app-builder /app/dist ./dist
+COPY --from=app-builder /app/node_modules ./node_modules
+COPY --from=app-builder /app/package*.json ./
+
+# Change ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Start the application
+CMD ["node", "dist/main"]

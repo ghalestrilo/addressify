@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  addressify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - libpostal_data:/opt/libpostal_data
+    environment:
+      - NODE_ENV=development
+    command: yarn start:dev
+    restart: unless-stopped
+
+volumes:
+  libpostal_data:
+    driver: local
